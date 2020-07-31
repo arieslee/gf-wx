@@ -48,8 +48,8 @@ func (s Server) Monitor() error {
 func (s *Server) requestHandler() {
 
 }
-func (s *Server) buildResponse(echo *Echo) error {
-	msgType := echo.MsgType
+func (s *Server) buildResponse(reply *Reply) error {
+	msgType := reply.MsgType
 	switch msgType {
 	case MsgTypeText:
 	case MsgTypeImage:
@@ -57,12 +57,11 @@ func (s *Server) buildResponse(echo *Echo) error {
 	case MsgTypeVideo:
 	case MsgTypeMusic:
 	case MsgTypeNews:
-	case MsgTypeTransfer:
 	default:
 		return ErrUnsupportReply
 	}
 
-	msgData := echo.MsgData
+	msgData := reply.MsgData
 	value := reflect.ValueOf(msgData)
 	//msgData must be a ptr
 	kind := value.Kind().String()
