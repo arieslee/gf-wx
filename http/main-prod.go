@@ -43,7 +43,7 @@ func main() {
 		state := r.GetString("state")
 		glog.Line().Println("code", code)
 		glog.Line().Println("state", state)
-		oauth.GetAccessToken(code)
+		_, _ = oauth.GetAccessToken(code)
 	})
 	s.SetPort(8080)
 	s.Run()

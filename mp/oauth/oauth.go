@@ -97,6 +97,7 @@ func (o *Oauth) GetAccessToken(code string) (*AccessTokenResult, error) {
 		value := gconv.Map(result)
 		glog.Line().Println("value", value)
 		expire := result.ExpiresIn - 100
+		glog.Line().Println("value str", gconv.String(value))
 		g.Redis().Do("SETEX", key, expire, gconv.String(value))
 		return result, nil
 	} else {
