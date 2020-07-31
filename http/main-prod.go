@@ -7,7 +7,7 @@
 package main
 
 import (
-	gf_wx "github.com/arieslee/gf-wx"
+	"github.com/arieslee/gf-wx"
 	"github.com/arieslee/gf-wx/mp/config"
 	"github.com/gogf/gf/database/gredis"
 	"github.com/gogf/gf/frame/g"

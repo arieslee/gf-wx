@@ -102,6 +102,7 @@ func (o *Oauth) GetAccessToken(code string) (*AccessTokenResult, error) {
 	} else {
 		glog.Line().Println("accessToken", accessToken)
 		err := gjson.DecodeTo(accessToken, &result)
+		glog.Line().Println("result", result)
 		if err != nil {
 			glog.Line().Fatalf("缓存内容解析失败，error : %v", err)
 			return nil, errors.New(fmt.Sprintf("缓存内容解析失败，error : %v", err))
