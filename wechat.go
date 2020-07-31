@@ -7,7 +7,8 @@
 package gf_wx
 
 import (
-    "github.com/arieslee/gf-wx/mp/config"
+	"github.com/arieslee/gf-wx/mp"
+	"github.com/arieslee/gf-wx/mp/config"
 )
 
 // Wechat struct
@@ -16,9 +17,9 @@ type Wechat struct {
 
 // NewWechat init
 func NewWechat() *Wechat {
-    return &Wechat{}
+	return &Wechat{}
 }
 
-func (w *Wechat) GetMp(cfg *config.MpConfig) {
-
+func (w *Wechat) GetMp(cfg *config.MpConfig) *mp.Mp {
+	return mp.NewMP(cfg)
 }

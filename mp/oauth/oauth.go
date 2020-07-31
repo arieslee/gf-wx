@@ -30,6 +30,13 @@ const (
 type Oauth struct {
 	config *config.MpConfig
 }
+
+func NewOauth(cfg *config.MpConfig) *Oauth {
+	return &Oauth{
+		config: cfg,
+	}
+}
+
 type AccessTokenResult struct {
 	ErrCode      int64  `json:"errcode"`
 	ErrMsg       string `json:"errmsg"`
@@ -71,11 +78,14 @@ func (o *Oauth) GetAuthCodeURL(redirectURI, scope, state string) string {
 func (o *Oauth) GetAccessToken(code string) (*AccessTokenResult, error) {
 	key := accessTokenCacheKey
 	accessToken, _ := redis.String(g.Redis().DoVar("GET", key))
+	glog.Line().Println("accessToken", accessToken)
 	result := &AccessTokenResult{}
 	if len(accessToken) <= 0 {
 		getTokenUrl := fmt.Sprintf(accessTokenURL, o.config.AppID, o.config.AppSecret, code)
+		glog.Line().Println("getTokenUrl", getTokenUrl)
 		response := ghttp.GetBytes(getTokenUrl)
 		err := gjson.DecodeTo(response, &result)
+		glog.Line().Println("result", result)
 		if err != nil {
 			glog.Line().Fatalf("GetAccessToken报文解析失败，error : %v", err)
 			return nil, errors.New(fmt.Sprintf("GetAccessToken报文解析失败，error : %v", err))
@@ -85,10 +95,12 @@ func (o *Oauth) GetAccessToken(code string) (*AccessTokenResult, error) {
 			return nil, errors.New(fmt.Sprintf("GetUserAccessToken error : %v , errmsg=%v", result.ErrCode, result.ErrMsg))
 		}
 		value := gconv.Map(result)
+		glog.Line().Println("value", value)
 		expire := result.ExpiresIn - 100
 		g.Redis().Do("SETEX", key, expire, gconv.String(value))
 		return result, nil
 	} else {
+		glog.Line().Println("accessToken", accessToken)
 		err := gjson.DecodeTo(accessToken, &result)
 		if err != nil {
 			glog.Line().Fatalf("缓存内容解析失败，error : %v", err)
