@@ -18,8 +18,8 @@ import (
 func main() {
 	s := g.Server()
 	cfg := &config.MpConfig{
-		AppID:     "wx41e6e70322d9c94f",
-		AppSecret: "a9c6490a98f709b923cd0beb09918582",
+		AppID:     "123",
+		AppSecret: "123",
 	}
 	wechat := gf_wx.NewWechat()
 	mp := wechat.GetMp(cfg)
