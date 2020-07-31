@@ -78,8 +78,6 @@ func (o *Oauth) GetAccessToken(code string) (*AccessTokenResult, error) {
 	key := accessTokenCacheKey
 	cacheData, _ := g.Redis().Do("GET", key)
 	accessToken := gconv.String(cacheData)
-	glog.Line().Println("accessToken", accessToken)
-	glog.Line().Println("cacheData", cacheData)
 	result := &AccessTokenResult{}
 	if len(accessToken) <= 0 {
 		getTokenUrl := fmt.Sprintf(accessTokenURL, o.config.AppID, o.config.AppSecret, code)
@@ -98,9 +96,7 @@ func (o *Oauth) GetAccessToken(code string) (*AccessTokenResult, error) {
 		g.Redis().Do("SETEX", key, expire, gconv.String(value))
 		return result, nil
 	} else {
-
 		err := gjson.DecodeTo(accessToken, &result)
-		glog.Line().Println("result", result)
 		if err != nil {
 			glog.Line().Fatalf("缓存内容解析失败，error : %v", err)
 			return nil, errors.New(fmt.Sprintf("缓存内容解析失败，error : %v", err))

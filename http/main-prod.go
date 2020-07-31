@@ -40,10 +40,14 @@ func main() {
 	})
 	s.BindHandler("GET:/callback", func(r *ghttp.Request) {
 		code := r.GetString("code")
-		state := r.GetString("state")
-		glog.Line().Println("code", code)
-		glog.Line().Println("state", state)
-		_, _ = oauth.GetAccessToken(code)
+		accessToken, err := oauth.GetAccessToken(code)
+		if err != nil {
+			glog.Line().Println(err.Error())
+		}
+		openId := accessToken.OpenID
+		token := accessToken.AccessToken
+		info, _ := oauth.GetUserInfo(token, openId)
+		glog.Line().Println(info)
 	})
 	s.SetPort(8080)
 	s.Run()
