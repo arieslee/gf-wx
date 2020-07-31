@@ -16,6 +16,7 @@ import (
 	"github.com/gogf/gf/os/glog"
 	"github.com/gogf/gf/util/gconv"
 	"net/url"
+	"sync"
 )
 
 const (
@@ -23,12 +24,14 @@ const (
 	accessTokenURL        = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=%s&&secret=%s&code=%s&grant_type=authorization_code"
 	userInfoURL           = "https://api.weixin.qq.com/sns/userinfo?access_token=%s&openid=%s&lang=zh_CN"
 	refreshAccessTokenURL = "https://api.weixin.qq.com/sns/oauth2/refresh_token?appid=%s&grant_type=refresh_token&refresh_token=%s"
-	accessTokenCacheKey   = "gf-wx-oauth-access-token"
+	accessTokenCacheKey   = "gf-wx-oauth-access-token:%s"
 )
 
 type Oauth struct {
 	config *config.MpConfig
 }
+
+var oauthAccessTokenSync *sync.RWMutex
 
 func NewOauth(cfg *config.MpConfig) *Oauth {
 	return &Oauth{
@@ -75,34 +78,40 @@ func (o *Oauth) GetAuthCodeURL(redirectURI, scope, state string) string {
 
 // 获取accessToken
 func (o *Oauth) GetAccessToken(code string) (*AccessTokenResult, error) {
-	key := accessTokenCacheKey
+	oauthAccessTokenSync.Lock()
+	defer oauthAccessTokenSync.Unlock()
+	key := fmt.Sprintf(accessTokenCacheKey, o.config.AppID)
 	cacheData, _ := g.Redis().Do("GET", key)
 	accessToken := gconv.String(cacheData)
 	result := &AccessTokenResult{}
 	if len(accessToken) <= 0 {
-		getTokenUrl := fmt.Sprintf(accessTokenURL, o.config.AppID, o.config.AppSecret, code)
-		response := ghttp.GetBytes(getTokenUrl)
-		err := gjson.DecodeTo(response, &result)
-		if err != nil {
-			glog.Line().Fatalf("GetAccessToken报文解析失败，error : %v", err)
-			return nil, errors.New(fmt.Sprintf("GetAccessToken报文解析失败，error : %v", err))
-		}
-		if result.ErrCode != 0 {
-			glog.Line().Fatalf("GetUserAccessToken error : %v , errmsg=%v", result.ErrCode, result.ErrMsg)
-			return nil, errors.New(fmt.Sprintf("GetUserAccessToken error : %v , errmsg=%v", result.ErrCode, result.ErrMsg))
-		}
-		value := gconv.Map(result)
-		expire := result.ExpiresIn - 100
-		g.Redis().Do("SETEX", key, expire, gconv.String(value))
-		return result, nil
-	} else {
-		err := gjson.DecodeTo(accessToken, &result)
-		if err != nil {
-			glog.Line().Fatalf("缓存内容解析失败，error : %v", err)
-			return nil, errors.New(fmt.Sprintf("缓存内容解析失败，error : %v", err))
-		}
-		return result, nil
+		return o.GetAccessTokenFromServer(code)
 	}
+	err := gjson.DecodeTo(accessToken, &result)
+	if err != nil {
+		glog.Line().Fatalf("缓存内容解析失败，error : %v", err)
+		return nil, errors.New(fmt.Sprintf("缓存内容解析失败，error : %v", err))
+	}
+	return result, nil
+}
+func (o *Oauth) GetAccessTokenFromServer(code string) (*AccessTokenResult, error) {
+	getTokenUrl := fmt.Sprintf(accessTokenURL, o.config.AppID, o.config.AppSecret, code)
+	response := ghttp.GetBytes(getTokenUrl)
+	result := &AccessTokenResult{}
+	err := gjson.DecodeTo(response, &result)
+	if err != nil {
+		glog.Line().Fatalf("GetAccessToken报文解析失败，error : %v", err)
+		return nil, errors.New(fmt.Sprintf("GetAccessToken报文解析失败，error : %v", err))
+	}
+	if result.ErrCode != 0 {
+		glog.Line().Fatalf("GetUserAccessToken error : %v , errmsg=%v", result.ErrCode, result.ErrMsg)
+		return nil, errors.New(fmt.Sprintf("GetUserAccessToken error : %v , errmsg=%v", result.ErrCode, result.ErrMsg))
+	}
+	value := gconv.Map(result)
+	expire := result.ExpiresIn - 100
+	key := fmt.Sprintf(accessTokenCacheKey, o.config.AppID)
+	g.Redis().Do("SETEX", key, expire, gconv.String(value))
+	return result, nil
 }
 
 // 刷新accessToken
@@ -129,8 +138,8 @@ func (o *Oauth) GetUserInfo(accessToken, openID string) (*UserInfo, error) {
 		return nil, errors.New(fmt.Sprintf("GetUserInfo报文解析失败，error : %v", err))
 	}
 	if result.ErrCode != 0 {
-		glog.Line().Fatalf("accessToken error : %v , errmsg=%v", result.ErrCode, result.ErrMsg)
-		return nil, errors.New(fmt.Sprintf("accessToken error : %v , errmsg=%v", result.ErrCode, result.ErrMsg))
+		glog.Line().Fatalf("GetUserInfo error : %v , errmsg=%v", result.ErrCode, result.ErrMsg)
+		return nil, errors.New(fmt.Sprintf("GetUserInfo error : %v , errmsg=%v", result.ErrCode, result.ErrMsg))
 	}
 	return result, nil
 }

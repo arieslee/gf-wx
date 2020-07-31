@@ -8,6 +8,7 @@ package mp
 
 import (
 	"github.com/arieslee/gf-wx/mp/config"
+	"github.com/arieslee/gf-wx/mp/js"
 	"github.com/arieslee/gf-wx/mp/oauth"
 )
 
@@ -23,4 +24,7 @@ func NewMP(cfg *config.MpConfig) *Mp {
 
 func (m *Mp) GetOauth() *oauth.Oauth {
 	return oauth.NewOauth(m.config)
+}
+func (m *Mp) GetJS() *js.Js {
+	return js.NewJS(m.config)
 }
