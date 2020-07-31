@@ -15,7 +15,6 @@ import (
 	"github.com/gogf/gf/net/ghttp"
 	"github.com/gogf/gf/os/glog"
 	"github.com/gogf/gf/util/gconv"
-	"github.com/gomodule/redigo/redis"
 	"net/url"
 )
 
@@ -77,15 +76,15 @@ func (o *Oauth) GetAuthCodeURL(redirectURI, scope, state string) string {
 // 获取accessToken
 func (o *Oauth) GetAccessToken(code string) (*AccessTokenResult, error) {
 	key := accessTokenCacheKey
-	accessToken, _ := redis.String(g.Redis().DoVar("GET", key))
+	cacheData, _ := g.Redis().Do("GET", key)
+	accessToken := gconv.String(cacheData)
 	glog.Line().Println("accessToken", accessToken)
+	glog.Line().Println("cacheData", cacheData)
 	result := &AccessTokenResult{}
 	if len(accessToken) <= 0 {
 		getTokenUrl := fmt.Sprintf(accessTokenURL, o.config.AppID, o.config.AppSecret, code)
-		glog.Line().Println("getTokenUrl", getTokenUrl)
 		response := ghttp.GetBytes(getTokenUrl)
 		err := gjson.DecodeTo(response, &result)
-		glog.Line().Println("result", result)
 		if err != nil {
 			glog.Line().Fatalf("GetAccessToken报文解析失败，error : %v", err)
 			return nil, errors.New(fmt.Sprintf("GetAccessToken报文解析失败，error : %v", err))
@@ -95,13 +94,11 @@ func (o *Oauth) GetAccessToken(code string) (*AccessTokenResult, error) {
 			return nil, errors.New(fmt.Sprintf("GetUserAccessToken error : %v , errmsg=%v", result.ErrCode, result.ErrMsg))
 		}
 		value := gconv.Map(result)
-		glog.Line().Println("value", value)
 		expire := result.ExpiresIn - 100
-		glog.Line().Println("value str", gconv.String(value))
 		g.Redis().Do("SETEX", key, expire, gconv.String(value))
 		return result, nil
 	} else {
-		glog.Line().Println("accessToken", accessToken)
+
 		err := gjson.DecodeTo(accessToken, &result)
 		glog.Line().Println("result", result)
 		if err != nil {
