@@ -49,9 +49,14 @@ type Config struct {
 }
 
 func NewJS(cfg *config.MpConfig) *Js {
+	InitSync()
 	return &Js{
 		config: cfg,
 	}
+}
+
+func InitSync() {
+	jsAPITicketSync = new(sync.RWMutex)
 }
 
 func (j *Js) GetConfig(url string) (*Config, error) {
