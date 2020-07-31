@@ -9,6 +9,7 @@ package main
 import (
 	gf_wx "github.com/arieslee/gf-wx"
 	"github.com/arieslee/gf-wx/mp/config"
+	"github.com/gogf/gf/database/gredis"
 	"github.com/gogf/gf/frame/g"
 	"github.com/gogf/gf/net/ghttp"
 	"github.com/gogf/gf/os/glog"
@@ -21,6 +22,14 @@ func main() {
 		AppID:     "123",
 		AppSecret: "123",
 	}
+	var (
+		redisCfg = gredis.Config{
+			Host: "127.0.0.1",
+			Port: 6379,
+			Db:   1,
+		}
+	)
+	gredis.SetConfig(redisCfg)
 	wechat := gf_wx.NewWechat()
 	mp := wechat.GetMp(cfg)
 	oauth := mp.GetOauth()
