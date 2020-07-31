@@ -34,9 +34,14 @@ type Oauth struct {
 var oauthAccessTokenSync *sync.RWMutex
 
 func NewOauth(cfg *config.MpConfig) *Oauth {
+	InitSync()
 	return &Oauth{
 		config: cfg,
 	}
+}
+
+func InitSync() {
+	oauthAccessTokenSync = new(sync.RWMutex)
 }
 
 type AccessTokenResult struct {

@@ -51,6 +51,12 @@ func main() {
 			return
 		}
 	})
+    // js sdk
+	s.BindHandler("GET:/js", func(r *ghttp.Request) {
+		jsSdk := mp.GetJS()
+		jsStr := jsSdk.BuildConfigStr(r.URL.String())
+		fmt.Println(jsStr)
+	})
 	s.SetPort(8080)
 	s.Run()
 }
