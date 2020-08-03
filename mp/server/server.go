@@ -7,28 +7,41 @@
 package server
 
 import (
+	"bytes"
 	"crypto/sha1"
+	"encoding/base64"
+	"encoding/binary"
 	"encoding/xml"
+	"errors"
 	"fmt"
+	"github.com/gogf/gf/crypto/gaes"
+	"github.com/gogf/gf/encoding/gbase64"
 	"github.com/gogf/gf/net/ghttp"
+	"github.com/gogf/gf/util/gconv"
+	"github.com/gogf/gf/util/grand"
 	"io"
-	"reflect"
+	"log"
 	"sort"
+	"strings"
 )
 
 type Server struct {
-	Response *ghttp.Response
-	Request  *ghttp.Request
-	Debug    bool
-	Token    string
+	Response       *ghttp.Response
+	Request        *ghttp.Request
+	Debug          bool
+	AppID          string
+	Token          string
+	EncodingAESKey string
 }
 
-func NewServer(resp *ghttp.Response, req *ghttp.Request, token string) *Server {
+func NewServer(resp *ghttp.Response, req *ghttp.Request, appID, token, aesKey string) *Server {
 	return &Server{
-		Response: resp,
-		Request:  req,
-		Debug:    false,
-		Token:    token,
+		Response:       resp,
+		Request:        req,
+		Debug:          false,
+		AppID:          appID,
+		Token:          token,
+		EncodingAESKey: aesKey,
 	}
 }
 
@@ -43,48 +56,74 @@ func (s Server) Monitor() error {
 		s.Response.Write(echoStr)
 		return nil
 	}
-
-}
-func (s *Server) requestHandler() {
-
-}
-func (s *Server) buildResponse(reply *Reply) error {
-	msgType := reply.MsgType
-	switch msgType {
-	case MsgTypeText:
-	case MsgTypeImage:
-	case MsgTypeVoice:
-	case MsgTypeVideo:
-	case MsgTypeMusic:
-	case MsgTypeNews:
-	default:
-		return ErrUnsupportReply
+	switch encryptType := s.Request.GetString("encrypt_type"); encryptType {
+	case "aes":
+		if len(s.EncodingAESKey) <= 0 {
+			log.Println("EncodingAESKey无效")
+		}
 	}
+	return nil
+}
 
-	msgData := reply.MsgData
-	value := reflect.ValueOf(msgData)
-	//msgData must be a ptr
-	kind := value.Kind().String()
-	if "ptr" != kind {
-		return ErrUnsupportReply
+// DecryptMsg 解密微信消息,密文string->base64Dec->aesDec->去除头部随机字串
+// AES加密的buf由16个字节的随机字符串、4个字节的msg_len(网络字节序)、msg和$AppId组成
+func (s *Server) DecryptMessage(msg string) (string, error) {
+	aesMsg, err := gbase64.DecodeString(msg)
+	if err != nil {
+		return "", err
 	}
+	buf, err := gaes.Decrypt(aesMsg, gconv.Bytes(s.EncodingAESKey))
+	var msgLen int32
+	binary.Read(bytes.NewBuffer(buf[16:20]), binary.BigEndian, &msgLen)
+	if msgLen < 0 || msgLen > 1000000 {
+		return "", errors.New("AesKey is invalid")
+	}
+	if string(buf[20+msgLen:]) != s.AppID {
+		return "", errors.New("AppId is invalid")
+	}
+	return string(buf[20 : 20+msgLen]), nil
+}
 
-	params := make([]reflect.Value, 1)
-	params[0] = reflect.ValueOf(s.requestMsg.FromUserName)
-	value.MethodByName("SetToUserName").Call(params)
+// CDATA 标准规范，XML编码成 `<![CDATA[消息内容]]>`
+type CDATA string
 
-	params[0] = reflect.ValueOf(s.requestMsg.ToUserName)
-	value.MethodByName("SetFromUserName").Call(params)
+// wxRespEnc 加密回复体
+type wxRespEnc struct {
+	XMLName      xml.Name `xml:"xml"`
+	Encrypt      CDATA
+	MsgSignature CDATA
+	TimeStamp    string
+	Nonce        CDATA
+}
 
-	params[0] = reflect.ValueOf(msgType)
-	value.MethodByName("SetMsgType").Call(params)
+// EncryptMsg 加密普通回复(AES-CBC),打包成xml格式
+// AES加密的buf由16个字节的随机字符串、4个字节的msg_len(网络字节序)、msg和$AppId组成
+func (s *Server) EncryptMsg(msg []byte, timeStamp, nonce string) (re *wxRespEnc, err error) {
+	buf := new(bytes.Buffer)
+	err = binary.Write(buf, binary.BigEndian, int32(len(msg)))
+	if err != nil {
+		return
+	}
+	l := buf.Bytes()
 
-	params[0] = reflect.ValueOf(util.GetCurrTs())
-	value.MethodByName("SetCreateTime").Call(params)
+	rd := []byte(grand.S(16))
 
-	srv.responseMsg = msgData
-	srv.responseRawXMLMsg, err = xml.Marshal(msgData)
+	plain := bytes.Join([][]byte{rd, l, msg, []byte(s.AppID)}, nil)
+	ae, _ := gaes.Decrypt(plain, gconv.Bytes(s.EncodingAESKey))
+	encMsg := base64.StdEncoding.EncodeToString(ae)
+	re = &wxRespEnc{
+		Encrypt:      CDATA(encMsg),
+		MsgSignature: CDATA(s.makeSignature(s.Token, timeStamp, nonce, encMsg)),
+		TimeStamp:    timeStamp,
+		Nonce:        CDATA(nonce),
+	}
 	return
+}
+func (s *Server) makeSignature(str ...string) string {
+	sort.Strings(str)
+	h := sha1.New()
+	h.Write([]byte(strings.Join(str, "")))
+	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
 // SetDebug set debug field

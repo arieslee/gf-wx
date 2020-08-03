@@ -62,6 +62,11 @@ func main() {
 		jsStr := jsSdk.BuildConfigStr(r.URL.String())
 		fmt.Println(jsStr)
 	})
+	// js sdk
+	s.BindHandler("GET:/api", func(r *ghttp.Request) {
+		serverSDK := mp.GetServer(r)
+		_ = serverSDK.Monitor()
+	})
 	s.SetPort(8080)
 	s.Run()
 }
