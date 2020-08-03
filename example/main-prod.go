@@ -20,8 +20,9 @@ import (
 func main() {
 	s := g.Server()
 	cfg := &config.MpConfig{
-		AppID:     "123",
-		AppSecret: "123",
+		AppID:          "123",
+		AppSecret:      "123",
+		EncodingAESKey: "jWmYm7qr5nMoAUwZRjGtBxmz3KA1tkAj3ykkR6q2B2C",
 	}
 	wechat := gf_wx.NewWechat()
 	wechat.InitRedis() //如果需要的话
@@ -63,10 +64,10 @@ func main() {
 		fmt.Println(jsStr)
 	})
 	// js sdk
-	s.BindHandler("GET:/api", func(r *ghttp.Request) {
+	s.BindHandler("POST:/api", func(r *ghttp.Request) {
 		serverSDK := mp.GetServer(r)
 		_ = serverSDK.Monitor()
 	})
-	s.SetPort(8080)
+	s.SetPort(8181)
 	s.Run()
 }

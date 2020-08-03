@@ -9,14 +9,16 @@ package server
 import (
 	"bytes"
 	"crypto/sha1"
-	"encoding/base64"
 	"encoding/binary"
-	"encoding/xml"
 	"errors"
 	"fmt"
+	"github.com/arieslee/gf-wx/helper"
 	"github.com/gogf/gf/crypto/gaes"
 	"github.com/gogf/gf/encoding/gbase64"
+	"github.com/gogf/gf/encoding/gxml"
 	"github.com/gogf/gf/net/ghttp"
+	"github.com/gogf/gf/os/glog"
+	"github.com/gogf/gf/os/gtime"
 	"github.com/gogf/gf/util/gconv"
 	"github.com/gogf/gf/util/grand"
 	"io"
@@ -31,17 +33,17 @@ type Server struct {
 	Debug          bool
 	AppID          string
 	Token          string
-	EncodingAESKey string
+	EncodingAESKey []byte
 }
 
 func NewServer(resp *ghttp.Response, req *ghttp.Request, appID, token, aesKey string) *Server {
 	return &Server{
 		Response:       resp,
 		Request:        req,
-		Debug:          false,
+		Debug:          true,
 		AppID:          appID,
 		Token:          token,
-		EncodingAESKey: aesKey,
+		EncodingAESKey: []byte(aesKey),
 	}
 }
 
@@ -61,8 +63,32 @@ func (s Server) Monitor() error {
 		if len(s.EncodingAESKey) <= 0 {
 			log.Println("EncodingAESKey无效")
 		}
+		res, _ := s.ParseXml()
+		_, _ = s.DecryptMessage(string(res.Encrypt))
+		msg := `<xml>
+  <ToUserName><![CDATA[toUser]]></ToUserName>
+  <FromUserName><![CDATA[fromUser]]></FromUserName>
+  <CreateTime>1348831860</CreateTime>
+  <MsgType><![CDATA[text]]></MsgType>
+  <Content><![CDATA[this is a test]]></Content>
+  <MsgId>1234567890123456</MsgId>
+</xml>
+`
+		timeStamp := gtime.Now().Unix()
+		nonce := grand.S(16)
+		data, _ := s.EncryptMsg([]byte(msg), gconv.String(timeStamp), nonce)
+		glog.Line().Println(data.Encrypt)
 	}
+
+	//glog.Line().Println(decodeStr)
 	return nil
+}
+func (s *Server) ParseXml() (*EncryptMessage, error) {
+	rawPostData := s.Request.GetBody()
+	xmlMap, _ := gxml.Decode(rawPostData)
+	res := &EncryptMessage{}
+	_ = gconv.Struct(xmlMap["xml"], &res)
+	return res, nil
 }
 
 // DecryptMsg 解密微信消息,密文string->base64Dec->aesDec->去除头部随机字串
@@ -70,35 +96,24 @@ func (s Server) Monitor() error {
 func (s *Server) DecryptMessage(msg string) (string, error) {
 	aesMsg, err := gbase64.DecodeString(msg)
 	if err != nil {
-		return "", err
+		glog.Line().Println(err.Error())
+		return "", fmt.Errorf("消息解密失败, err=%v", err)
 	}
-	buf, err := gaes.Decrypt(aesMsg, gconv.Bytes(s.EncodingAESKey))
-	var msgLen int32
-	binary.Read(bytes.NewBuffer(buf[16:20]), binary.BigEndian, &msgLen)
+	buf, _, _, _ := helper.AESDecryptMsg(aesMsg, s.EncodingAESKey)
+	result := gconv.String(buf)
+	glog.Line().Println(result)
+	msgLen := len(result)
 	if msgLen < 0 || msgLen > 1000000 {
 		return "", errors.New("AesKey is invalid")
 	}
-	if string(buf[20+msgLen:]) != s.AppID {
-		return "", errors.New("AppId is invalid")
-	}
-	return string(buf[20 : 20+msgLen]), nil
+	return result, nil
 }
 
 // CDATA 标准规范，XML编码成 `<![CDATA[消息内容]]>`
-type CDATA string
-
-// wxRespEnc 加密回复体
-type wxRespEnc struct {
-	XMLName      xml.Name `xml:"xml"`
-	Encrypt      CDATA
-	MsgSignature CDATA
-	TimeStamp    string
-	Nonce        CDATA
-}
 
 // EncryptMsg 加密普通回复(AES-CBC),打包成xml格式
 // AES加密的buf由16个字节的随机字符串、4个字节的msg_len(网络字节序)、msg和$AppId组成
-func (s *Server) EncryptMsg(msg []byte, timeStamp, nonce string) (re *wxRespEnc, err error) {
+func (s *Server) EncryptMsg(msg []byte, timeStamp, nonce string) (re *EncryptMessage, err error) {
 	buf := new(bytes.Buffer)
 	err = binary.Write(buf, binary.BigEndian, int32(len(msg)))
 	if err != nil {
@@ -109,11 +124,15 @@ func (s *Server) EncryptMsg(msg []byte, timeStamp, nonce string) (re *wxRespEnc,
 	rd := []byte(grand.S(16))
 
 	plain := bytes.Join([][]byte{rd, l, msg, []byte(s.AppID)}, nil)
-	ae, _ := gaes.Decrypt(plain, gconv.Bytes(s.EncodingAESKey))
-	encMsg := base64.StdEncoding.EncodeToString(ae)
-	re = &wxRespEnc{
-		Encrypt:      CDATA(encMsg),
-		MsgSignature: CDATA(s.makeSignature(s.Token, timeStamp, nonce, encMsg)),
+	//加密
+	ae, _ := gaes.Encrypt(plain, s.EncodingAESKey)
+	// base64
+	encMsg := gbase64.Encode(ae)
+	encryptMsg := gconv.String(encMsg)
+	glog.Line().Println(gconv.String(ae))
+	re = &EncryptMessage{
+		Encrypt:      CDATA(encryptMsg),
+		MsgSignature: CDATA(s.makeSignature(s.Token, timeStamp, nonce, encryptMsg)),
 		TimeStamp:    timeStamp,
 		Nonce:        CDATA(nonce),
 	}
