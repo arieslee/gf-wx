@@ -11,11 +11,83 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/md5"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"hash"
+	"sort"
+	"strings"
 )
+
+// 微信签名算法方式
+const (
+	SignTypeMD5        = `MD5`
+	SignTypeHMACSHA256 = `HMAC-SHA256`
+)
+
+// OrderParam order params
+func OrderParam(p map[string]string, bizKey string) (returnStr string) {
+	keys := make([]string, 0, len(p))
+	for k := range p {
+		if k == "sign" {
+			continue
+		}
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	var buf bytes.Buffer
+	for _, k := range keys {
+		if p[k] == "" {
+			continue
+		}
+		if buf.Len() > 0 {
+			buf.WriteByte('&')
+		}
+		buf.WriteString(k)
+		buf.WriteByte('=')
+		buf.WriteString(p[k])
+	}
+	buf.WriteString(bizKey)
+	returnStr = buf.String()
+	return
+}
+
+// MakeSign 生成签名
+func MakeSign(content, signType, key string) (string, error) {
+	var h hash.Hash
+	if signType == SignTypeHMACSHA256 {
+		h = hmac.New(sha256.New, []byte(key))
+	} else {
+		h = md5.New()
+	}
+
+	if _, err := h.Write([]byte(content)); err != nil {
+		return ``, err
+	}
+	return strings.ToUpper(hex.EncodeToString(h.Sum(nil))), nil
+}
+
+// ParamSign 生成所传参数的签名
+func ParamSign(p map[string]string, key string) (string, error) {
+	bizKey := "&key=" + key
+	str := OrderParam(p, bizKey)
+
+	var signType string
+	switch p["sign_type"] {
+	case SignTypeMD5, SignTypeHMACSHA256:
+		signType = p["sign_type"]
+	case ``:
+		signType = SignTypeMD5
+	default:
+		return ``, errors.New(`invalid sign_type`)
+	}
+
+	return MakeSign(str, signType, key)
+}
 
 //EncryptMsg 加密消息
 func EncryptMsg(random, rawXMLMsg []byte, appID, aesKey string) (encrtptMsg []byte, err error) {
