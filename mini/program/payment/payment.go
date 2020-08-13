@@ -19,6 +19,7 @@ import (
 	"github.com/gogf/gf/util/gconv"
 	"github.com/gogf/gf/util/grand"
 	"strconv"
+	"strings"
 )
 
 type Payment struct {
@@ -101,15 +102,21 @@ func (p *Payment) GenPrePareOrder(params *PayRequest) (*UnifiedOrderResponse, er
 	// 自动把元转成分
 	totalFee := gconv.Float64(params.TotalFee) * 100
 	params.TotalFee = strconv.FormatInt(gconv.Int64(totalFee), 10)
-	params.NonceStr = grand.S(32)
+	if len(params.NonceStr) <= 0 {
+		params.NonceStr = grand.S(32)
+	}
 	params.AppID = p.config.AppID
 	params.MchID = p.config.MchID
-	params.SignType = helper.SignTypeMD5
-	ip, err := gipv4.GetIpArray()
-	if err != nil {
-		return nil, fmt.Errorf("无法获取服务器的IP,err:%v", err)
+	if len(params.SignType) <= 0 {
+		params.SignType = helper.SignTypeMD5
 	}
-	params.SpbillCreateIP = ip[0]
+	if len(params.SpbillCreateIP) <= 0 {
+		ip, err := gipv4.GetIpArray()
+		if err != nil {
+			return nil, fmt.Errorf("无法获取服务器的IP,err:%v", err)
+		}
+		params.SpbillCreateIP = ip[0]
+	}
 	postMap := gconv.MapStrStr(params)
 	sign, err := helper.ParamSign(postMap, p.config.ParamSignKey)
 	if err != nil {
@@ -124,9 +131,9 @@ func (p *Payment) GenPrePareOrder(params *PayRequest) (*UnifiedOrderResponse, er
 	if err != nil {
 		return nil, err
 	}
-	if result.ReturnCode != "SUCCESS" {
-		glog.Line().Fatalf("支付失败，error : %s", result.ReturnMsg)
-		return nil, fmt.Errorf("支付失败，error : %s", result.ReturnMsg)
+	if strings.ToUpper(result.ReturnCode) != "SUCCESS" {
+		glog.Line().Fatalf("下单失败，error : %s", result.ReturnMsg)
+		return nil, fmt.Errorf("下单失败，error : %s", result.ReturnMsg)
 	}
 	return result, nil
 }
