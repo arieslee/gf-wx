@@ -19,7 +19,7 @@ const (
 	codeToSessionUrl = "https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=JSCODE&grant_type=authorization_code"
 )
 
-type Login struct {
+type MiniProgramLogin struct {
 	config *config.MiniConfig
 }
 
@@ -33,13 +33,13 @@ type CodeToSessionResult struct {
 	UnionID string `json:"unionid"`
 }
 
-func NewLogin(cfg *config.MiniConfig) *Login {
-	return &Login{
+func NewLogin(cfg *config.MiniConfig) *MiniProgramLogin {
+	return &MiniProgramLogin{
 		config: cfg,
 	}
 }
 
-func (o *Login) CodeToSession() (*CodeToSessionResult, error) {
+func (o *MiniProgramLogin) CodeToSession() (*CodeToSessionResult, error) {
 	URL := fmt.Sprintf(codeToSessionUrl, o.config.AppID, o.config.AppSecret)
 	response := ghttp.GetBytes(URL)
 	result := &CodeToSessionResult{}

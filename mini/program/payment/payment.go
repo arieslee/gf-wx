@@ -22,7 +22,7 @@ import (
 	"strings"
 )
 
-type Payment struct {
+type MiniProgramPayment struct {
 	config *config.MiniConfig
 }
 
@@ -30,8 +30,8 @@ const (
 	PrePareURL = "https://api.mch.weixin.qq.com/pay/unifiedorder"
 )
 
-func NewPayment(cfg *config.MiniConfig) *Payment {
-	return &Payment{
+func NewPayment(cfg *config.MiniConfig) *MiniProgramPayment {
+	return &MiniProgramPayment{
 		config: cfg,
 	}
 }
@@ -80,7 +80,7 @@ type PayRequest struct {
 	XMLName struct{} `xml:"xml"`
 }
 
-func (p *Payment) GenPrePareOrder(params *PayRequest) (*UnifiedOrderResponse, error) {
+func (p *MiniProgramPayment) GenPrePareOrder(params *PayRequest) (*UnifiedOrderResponse, error) {
 	if len(params.OutTradeNo) <= 0 {
 		return nil, errors.New("缺少统一支付接口必填参数out_trade_no！")
 	}

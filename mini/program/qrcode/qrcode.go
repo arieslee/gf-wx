@@ -16,7 +16,7 @@ import (
 	"github.com/gogf/gf/os/glog"
 )
 
-type QRCode struct {
+type MiniProgramQRCode struct {
 	config *config.MiniConfig
 }
 
@@ -53,14 +53,14 @@ type ResultOfQrCode struct {
 	IsHyaline bool `json:"is_hyaline,omitempty"`
 }
 
-func NewQRCode(cfg *config.MiniConfig) *QRCode {
-	return &QRCode{
+func NewQRCode(cfg *config.MiniConfig) *MiniProgramQRCode {
+	return &MiniProgramQRCode{
 		config: cfg,
 	}
 }
 
 // fetchCode 请求并返回二维码二进制数据
-func (qrCode *QRCode) fetchCode(urlStr string, body interface{}) ([]byte, error) {
+func (qrCode *MiniProgramQRCode) fetchCode(urlStr string, body interface{}) ([]byte, error) {
 	var accessToken string
 	tokenInstance := token.NewToken(qrCode.config)
 	accessTokenRes, err := tokenInstance.GetToken()
@@ -95,18 +95,18 @@ func (qrCode *QRCode) fetchCode(urlStr string, body interface{}) ([]byte, error)
 
 // CreateWXAQRCode 获取小程序二维码，适用于需要的码数量较少的业务场景
 // 文档地址： https://developers.weixin.qq.com/miniprogram/dev/api/createWXAQRCode.html
-func (qrCode *QRCode) CreateWXAQRCode(coderParams ResultOfQrCode) (response []byte, err error) {
+func (qrCode *MiniProgramQRCode) CreateWXAQRCode(coderParams ResultOfQrCode) (response []byte, err error) {
 	return qrCode.fetchCode(createWXAQRCodeURL, coderParams)
 }
 
 // GetWXACode 获取小程序码，适用于需要的码数量较少的业务场景
 // 文档地址： https://developers.weixin.qq.com/miniprogram/dev/api/getWXACode.html
-func (qrCode *QRCode) GetWXACode(coderParams ResultOfQrCode) (response []byte, err error) {
+func (qrCode *MiniProgramQRCode) GetWXACode(coderParams ResultOfQrCode) (response []byte, err error) {
 	return qrCode.fetchCode(getWXACodeURL, coderParams)
 }
 
 // GetWXACodeUnlimit 获取小程序码，适用于需要的码数量极多的业务场景
 // 文档地址： https://developers.weixin.qq.com/miniprogram/dev/api/getWXACodeUnlimit.html
-func (qrCode *QRCode) GetWXACodeUnlimit(coderParams ResultOfQrCode) (response []byte, err error) {
+func (qrCode *MiniProgramQRCode) GetWXACodeUnlimit(coderParams ResultOfQrCode) (response []byte, err error) {
 	return qrCode.fetchCode(getWXACodeUnlimitURL, coderParams)
 }

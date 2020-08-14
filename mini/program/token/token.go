@@ -17,7 +17,7 @@ import (
 	"github.com/gogf/gf/util/gconv"
 )
 
-type Token struct {
+type MiniProgramToken struct {
 	config *config.MiniConfig
 }
 
@@ -26,8 +26,8 @@ const (
 	tokenCacheKey = "gf-wx-token:%s"
 )
 
-func NewToken(cfg *config.MiniConfig) *Token {
-	return &Token{
+func NewToken(cfg *config.MiniConfig) *MiniProgramToken {
+	return &MiniProgramToken{
 		config: cfg,
 	}
 }
@@ -40,7 +40,7 @@ type AccessTokenResult struct {
 	ExpiresIn   int64  `json:"expires_in"`
 }
 
-func (t *Token) GetToken() (*AccessTokenResult, error) {
+func (t *MiniProgramToken) GetToken() (*AccessTokenResult, error) {
 	key := fmt.Sprintf(tokenCacheKey, t.config.AppID)
 	cacheData, _ := g.Redis().Do("GET", key)
 	tokenStr := gconv.String(cacheData)
@@ -56,7 +56,7 @@ func (t *Token) GetToken() (*AccessTokenResult, error) {
 	return result, nil
 }
 
-func (t *Token) GetTokenFromServer() (*AccessTokenResult, error) {
+func (t *MiniProgramToken) GetTokenFromServer() (*AccessTokenResult, error) {
 	url := fmt.Sprintf(getTokenURL, t.config.AppID, t.config.AppSecret)
 	response := ghttp.GetBytes(url)
 	result := &AccessTokenResult{}

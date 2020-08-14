@@ -15,12 +15,12 @@ import (
 	"github.com/arieslee/gf-wx/mini/config"
 )
 
-type Decrypter struct {
+type MiniProgramDecrypter struct {
 	config *config.MiniConfig
 }
 
-func NewDecrypter(cfg *config.MiniConfig) *Decrypter {
-	return &Decrypter{
+func NewDecrypter(cfg *config.MiniConfig) *MiniProgramDecrypter {
+	return &MiniProgramDecrypter{
 		config: cfg,
 	}
 }
@@ -107,7 +107,7 @@ func getCipherText(sessionKey, encryptedData, iv string) ([]byte, error) {
 }
 
 // Decrypt 解密数据
-func (decrypter *Decrypter) Decrypt(sessionKey, encryptedData, iv string) (*PlainResult, error) {
+func (decrypter *MiniProgramDecrypter) Decrypt(sessionKey, encryptedData, iv string) (*PlainResult, error) {
 	cipherText, err := getCipherText(sessionKey, encryptedData, iv)
 	if err != nil {
 		return nil, err
