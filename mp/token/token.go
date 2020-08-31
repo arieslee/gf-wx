@@ -15,6 +15,7 @@ import (
 	"github.com/gogf/gf/net/ghttp"
 	"github.com/gogf/gf/os/glog"
 	"github.com/gogf/gf/util/gconv"
+	"sync"
 )
 
 type Token struct {
@@ -32,6 +33,8 @@ func NewToken(cfg *config.MpConfig) *Token {
 	}
 }
 
+var getCoreTokenSync *sync.Mutex
+
 //ResAccessToken struct
 type AccessTokenResult struct {
 	ErrCode     int64  `json:"errcode"`
@@ -40,6 +43,9 @@ type AccessTokenResult struct {
 	ExpiresIn   int64  `json:"expires_in"`
 }
 
+func InitSync() {
+	getCoreTokenSync = new(sync.Mutex)
+}
 func (t *Token) GetToken() (*AccessTokenResult, error) {
 	key := fmt.Sprintf(tokenCacheKey, t.config.AppID)
 	cacheData, _ := g.Redis().Do("GET", key)
@@ -57,6 +63,10 @@ func (t *Token) GetToken() (*AccessTokenResult, error) {
 }
 
 func (t *Token) GetTokenFromServer() (*AccessTokenResult, error) {
+	if getCoreTokenSync != nil {
+		getCoreTokenSync.Lock()
+		defer getCoreTokenSync.Unlock()
+	}
 	url := fmt.Sprintf(getTokenURL, t.config.AppID, t.config.AppSecret)
 	response := ghttp.GetBytes(url)
 	result := &AccessTokenResult{}

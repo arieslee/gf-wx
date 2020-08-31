@@ -268,8 +268,8 @@ func decodeNetworkByteOrder(orderBytes []byte) (n uint32) {
 func MD5Sum(txt string) (sum string) {
 	h := md5.New()
 	buf := bufio.NewWriterSize(h, 128)
-	buf.WriteString(txt)
-	buf.Flush()
+	_, _ = buf.WriteString(txt)
+	_ = buf.Flush()
 	sign := make([]byte, hex.EncodedLen(h.Size()))
 	hex.Encode(sign, h.Sum(nil))
 	sum = string(bytes.ToUpper(sign))
