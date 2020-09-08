@@ -13,8 +13,8 @@ import (
 	"github.com/gogf/gf/encoding/gjson"
 	"github.com/gogf/gf/frame/g"
 	"github.com/gogf/gf/net/ghttp"
-	"github.com/gogf/gf/os/glog"
 	"github.com/gogf/gf/util/gconv"
+	"sync"
 )
 
 type MiniProgramToken struct {
@@ -40,6 +40,11 @@ type AccessTokenResult struct {
 	ExpiresIn   int64  `json:"expires_in"`
 }
 
+var syncLock *sync.Mutex
+
+func InitSyncLock() {
+	syncLock = new(sync.Mutex)
+}
 func (t *MiniProgramToken) GetToken() (*AccessTokenResult, error) {
 	key := fmt.Sprintf(tokenCacheKey, t.config.AppID)
 	cacheData, _ := g.Redis().Do("GET", key)
@@ -50,23 +55,27 @@ func (t *MiniProgramToken) GetToken() (*AccessTokenResult, error) {
 	}
 	err := gjson.DecodeTo(tokenStr, &result)
 	if err != nil {
-		glog.Line().Fatalf("GetToken缓存内容解析失败，error : %v", err)
+		g.Log().Line().Fatalf("GetToken缓存内容解析失败，error : %v", err)
 		return nil, errors.New(fmt.Sprintf("GetToken缓存内容解析失败，error : %v", err))
 	}
 	return result, nil
 }
 
 func (t *MiniProgramToken) GetTokenFromServer() (*AccessTokenResult, error) {
+	if syncLock != nil {
+		syncLock.Lock()
+		defer syncLock.Unlock()
+	}
 	url := fmt.Sprintf(getTokenURL, t.config.AppID, t.config.AppSecret)
 	response := ghttp.GetBytes(url)
 	result := &AccessTokenResult{}
 	err := gjson.DecodeTo(response, &result)
 	if err != nil {
-		glog.Line().Fatalf("GetTokenFromServer报文解析失败，error : %v", err)
+		g.Log().Line().Fatalf("GetTokenFromServer报文解析失败，error : %v", err)
 		return nil, errors.New(fmt.Sprintf("GetTokenFromServer报文解析失败，error : %v", err))
 	}
 	if result.ErrCode != 0 {
-		glog.Line().Fatalf("GetTokenFromServer error : %v , errmsg=%v", result.ErrCode, result.ErrMsg)
+		g.Log().Line().Fatalf("GetTokenFromServer error : %v , errmsg=%v", result.ErrCode, result.ErrMsg)
 		return nil, errors.New(fmt.Sprintf("GetTokenFromServer error : %v , errmsg=%v", result.ErrCode, result.ErrMsg))
 	}
 	value := gconv.Map(result)

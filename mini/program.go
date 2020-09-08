@@ -23,13 +23,13 @@ func NewProgram(cfg *config.MiniConfig) *Program {
 	}
 }
 
-func (p *Program) GetLogin() *login.Login {
+func (p *Program) GetLogin() *login.MiniProgramLogin {
 	return login.NewLogin(p.config)
 }
 
-func (p *Program) GetQrcode() *qrcode.QRCode {
+func (p *Program) GetQrcode() *qrcode.MiniProgramQRCode {
 	return qrcode.NewQRCode(p.config)
 }
-func (p *Program) GetPayment() *payment.Payment {
+func (p *Program) GetPayment() *payment.MiniProgramPayment {
 	return payment.NewPayment(p.config)
 }

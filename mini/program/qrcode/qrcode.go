@@ -12,8 +12,8 @@ import (
 	"github.com/arieslee/gf-wx/mini/config"
 	"github.com/arieslee/gf-wx/mini/program/token"
 	"github.com/gogf/gf/encoding/gjson"
+	"github.com/gogf/gf/frame/g"
 	"github.com/gogf/gf/net/ghttp"
-	"github.com/gogf/gf/os/glog"
 )
 
 type MiniProgramQRCode struct {
@@ -34,7 +34,7 @@ const (
 )
 
 // QRCoder 小程序码参数
-type ResultOfQrCode struct {
+type RequestOfQrCode struct {
 	ErrCode int64  `json:"errcode"`
 	ErrMsg  string `json:"errmsg"`
 	// page 必须是已经发布的小程序存在的页面,根路径前不要填加 /,不能携带参数（参数请放在scene字段里），如果不填写这个字段，默认跳主页面
@@ -81,13 +81,13 @@ func (qrCode *MiniProgramQRCode) fetchCode(urlStr string, body interface{}) ([]b
 		// 返回文件
 		return response, nil
 	}
-	result := &ResultOfQrCode{}
+	result := &RequestOfQrCode{}
 	err = gjson.DecodeTo(response, &result)
 	if err != nil {
 		return nil, err
 	}
 	if result.ErrCode != 0 {
-		glog.Line().Fatalf("mini program qrcode fetchCode报文内容解析失败，error : %v", err)
+		g.Log().Line().Fatalf("mini program qrcode fetchCode报文内容解析失败，error : %v", err)
 		return nil, errors.New(fmt.Sprintf("mini program qrcode fetchCode报文内容解析失败，error : %v", err))
 	}
 	return response, nil
@@ -95,18 +95,18 @@ func (qrCode *MiniProgramQRCode) fetchCode(urlStr string, body interface{}) ([]b
 
 // CreateWXAQRCode 获取小程序二维码，适用于需要的码数量较少的业务场景
 // 文档地址： https://developers.weixin.qq.com/miniprogram/dev/api/createWXAQRCode.html
-func (qrCode *MiniProgramQRCode) CreateWXAQRCode(coderParams ResultOfQrCode) (response []byte, err error) {
+func (qrCode *MiniProgramQRCode) CreateWXAQRCode(coderParams RequestOfQrCode) (response []byte, err error) {
 	return qrCode.fetchCode(createWXAQRCodeURL, coderParams)
 }
 
 // GetWXACode 获取小程序码，适用于需要的码数量较少的业务场景
 // 文档地址： https://developers.weixin.qq.com/miniprogram/dev/api/getWXACode.html
-func (qrCode *MiniProgramQRCode) GetWXACode(coderParams ResultOfQrCode) (response []byte, err error) {
+func (qrCode *MiniProgramQRCode) GetWXACode(coderParams RequestOfQrCode) (response []byte, err error) {
 	return qrCode.fetchCode(getWXACodeURL, coderParams)
 }
 
 // GetWXACodeUnlimit 获取小程序码，适用于需要的码数量极多的业务场景
 // 文档地址： https://developers.weixin.qq.com/miniprogram/dev/api/getWXACodeUnlimit.html
-func (qrCode *MiniProgramQRCode) GetWXACodeUnlimit(coderParams ResultOfQrCode) (response []byte, err error) {
+func (qrCode *MiniProgramQRCode) GetWXACodeUnlimit(coderParams RequestOfQrCode) (response []byte, err error) {
 	return qrCode.fetchCode(getWXACodeUnlimitURL, coderParams)
 }

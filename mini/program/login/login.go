@@ -11,12 +11,12 @@ import (
 	"fmt"
 	"github.com/arieslee/gf-wx/mini/config"
 	"github.com/gogf/gf/encoding/gjson"
+	"github.com/gogf/gf/frame/g"
 	"github.com/gogf/gf/net/ghttp"
-	"github.com/gogf/gf/os/glog"
 )
 
 const (
-	codeToSessionUrl = "https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=JSCODE&grant_type=authorization_code"
+	codeToSessionUrl = "https://api.weixin.qq.com/sns/jscode2session?appid=%s&secret=%s&js_code=%s&grant_type=authorization_code"
 )
 
 type MiniProgramLogin struct {
@@ -39,17 +39,19 @@ func NewLogin(cfg *config.MiniConfig) *MiniProgramLogin {
 	}
 }
 
-func (o *MiniProgramLogin) CodeToSession() (*CodeToSessionResult, error) {
-	URL := fmt.Sprintf(codeToSessionUrl, o.config.AppID, o.config.AppSecret)
+// CodeToSession 登录凭证校验
+// @see https://developers.weixin.qq.com/miniprogram/dev/api-backend/open-api/login/auth.code2Session.html
+func (o *MiniProgramLogin) CodeToSession(jsCode string) (*CodeToSessionResult, error) {
+	URL := fmt.Sprintf(codeToSessionUrl, o.config.AppID, o.config.AppSecret, jsCode)
 	response := ghttp.GetBytes(URL)
 	result := &CodeToSessionResult{}
 	err := gjson.DecodeTo(response, &result)
 	if err != nil {
-		glog.Line().Fatalf("CodeToSession报文解析失败，error : %v", err)
+		g.Log().Line().Fatalf("CodeToSession报文解析失败，error : %v", err)
 		return nil, errors.New(fmt.Sprintf("CodeToSession报文解析失败，error : %v", err))
 	}
 	if result.ErrCode != 0 {
-		glog.Line().Fatalf("CodeToSession error : %v , errmsg=%v", result.ErrCode, result.ErrMsg)
+		g.Log().Line().Fatalf("CodeToSession error : %v , errmsg=%v", result.ErrCode, result.ErrMsg)
 		return nil, errors.New(fmt.Sprintf("CodeToSession error : %v , errmsg=%v", result.ErrCode, result.ErrMsg))
 	}
 	return result, nil
