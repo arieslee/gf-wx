@@ -10,6 +10,7 @@ import (
 	"github.com/arieslee/gf-wx/mp/config"
 	"github.com/arieslee/gf-wx/mp/js"
 	"github.com/arieslee/gf-wx/mp/oauth"
+	mp_server "github.com/arieslee/gf-wx/mp/server"
 )
 
 type Mp struct {
@@ -27,4 +28,7 @@ func (m *Mp) GetOauth() *oauth.Oauth {
 }
 func (m *Mp) GetJS() *js.Js {
 	return js.NewJS(m.config)
+}
+func (m *Mp) NewServer()*mp_server.MPServer {
+	return mp_server.NewMPServer(m.config)
 }

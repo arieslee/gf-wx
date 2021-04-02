@@ -1,0 +1,14 @@
+# Redis数据库配置
+[redis]
+    default = "127.0.0.1:6379,0"
+[server]
+    name="gfWXServer"
+    port=18181
+# 日志
+[logger]
+    path   = "/gf-wx/logs"
+    level  = "all"
+[wechat]
+    appId="123"
+    appSecret="123"
+    token="234"
